@@ -1,8 +1,8 @@
 {
   "name": "Testofill, Form Filler for Testers",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "manifest_version": 2,
-  "author": "Jakub Holy <https://blog.jakubholy.net/>",
+  "author": "Bruno Nunes <https:/nunes.dev.br/>",
   "icons": {
     "16": "autofill_16x16.png"
   },
