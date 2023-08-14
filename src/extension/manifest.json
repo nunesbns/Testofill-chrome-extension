@@ -1,6 +1,6 @@
 {
   "name": "Form Filler for Testers",
-  "version": "0.15.0",
+  "version": "0.17.0",
   "manifest_version": 3,
   "author": "Bruno Nunes <https:/nunes.dev.br/>",
   "icons": {
@@ -13,10 +13,6 @@
     "scripting",
     "contextMenus"
   ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
   "action": {
     "default_title": "Form Filler",
     "default_icon": {
@@ -24,19 +20,6 @@
     },
     "default_popup": "popup.html"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "js": [
-        "generated/form-filler-content-packed.js"
-      ],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
   "options_page": "options.html",
   "background": {
     "service_worker": "events.js"

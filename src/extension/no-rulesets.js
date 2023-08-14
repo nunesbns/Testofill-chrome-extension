@@ -1,8 +1,7 @@
-document.addEventListener('DOMContentLoaded', function() {
-  var paramStr = document.location.search;
-  var idx = paramStr.indexOf('url=');
-  if (idx >= 0) {
-    var url = paramStr.substring(idx + 4);
-    document.getElementById('url').textContent = ' ' + url;
-  }
+document.addEventListener('DOMContentLoaded', function () {
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    var currentTab = tabs[0]; // Aqui está sua aba atual
+    var currentTabUrl = currentTab.url; // E aqui está a URL dela
+    document.getElementById('url').textContent = ' ' + currentTabUrl;
+  });
 });

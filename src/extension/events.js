@@ -202,3 +202,11 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
 
   }
 });
+
+
+chrome.action.onClicked.addListener((tab) => {
+  chrome.scripting.executeScript({
+      target: {tabId: tab.id},
+      file: 'generated/form-filler-content-packed.js'
+  });
+});
