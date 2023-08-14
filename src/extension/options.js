@@ -13,9 +13,8 @@ function showStatus(message, type) {
 
   statusElm.innerHTML = '<span style="color:' + color + '" class="status-msg">' + message + '</span>';
 
-  // TODO fix this timeout reset, does not work:
   setTimeout(function() {
-    status.innerHTML = "";
+    statusElm.innerHTML = "";
   }, 750);
 }
 
@@ -23,15 +22,13 @@ function showError(message) {
   showStatus(message, "error");
 }
 
-function saveToStorage(json) { // see also events.js: mergeIntoOptions()
-  chrome.runtime.getBackgroundPage(function(eventsWin){
-    eventsWin.saveRulesToStorage(json, function(error) {
-      if (typeof error === 'undefined') {
-        showStatus("Options Saved.");
-      } else {
-        showError("Saving failed: " + error);
-      }
-    });
+function saveToStorage(json) {
+  chrome.runtime.sendMessage({action: "saveRulesToStorage", data: json}, function(response) {
+    if (response && response.success) {
+      showStatus("Options Saved.");
+    } else if (response && response.error) {
+      showError("Saving failed: " + response.error);
+    }
   });
 }
 
@@ -46,22 +43,22 @@ function restore_options(editor) {
     "forms": {
       "duckduckgo.com": [
         {
-          "name": "(optional) Search for testofill",
+          "name": "(optional) Search for form-filler",
           "doc": "(optional) This is an example rule set; it is not saved so click [Save] if you want to use it",
           "fields": [
-            {"query": "[name='q']", "value": "Testofill rocks!"}
+            {"query": "[name='q']", "value": "Form Filler rocks!"}
           ]
         }
       ]
     }
   };
 
-  chrome.storage.local.get('testofill.rules', function(items) {
+  chrome.storage.local.get('form-filler.rules', function(items) {
     if (typeof chrome.runtime.lastError === "undefined") {
-      var rules = items['testofill.rules'];
+      var rules = items['form-filler.rules'];
       console.log("Rules restored: ", rules);
 
-      if (typeof rules !== "undefined") { // TODO verify behaves OK if there are no saved rules
+      if (typeof rules !== "undefined") {
         editor.set(rules);
       } else {
         editor.set(exampleJson);
@@ -80,13 +77,13 @@ function init() {
   var container = document.getElementById("jsoneditor");
   var options = {
     change: function() { showStatus("Configuration changed, don't forget to save it", "info"); },
-    mode: 'tree',
-    modes: ['tree', 'code'], // allowed modes
+    mode: 'code',
+    modes: ['tree', 'code'],
     error: function (err) {
       console.log("JSONEditor error:", err);
     }
   };
-  var editor = new jsoneditor.JSONEditor(container, options);
+  var editor = new JSONEditor(container, options);
 
   restore_options(editor);
 

@@ -2,24 +2,15 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Testofill options</title>
+    <title>Form Filler options</title>
 
       <!-- jsoneditor -->
       <link rel="stylesheet" type="text/css" href="lib/jsoneditor/jsoneditor-min.css">
       <script src="lib/jsoneditor/jsoneditor-min.js"></script>
 
-      <!-- ace code editor -->
-      <script type="text/javascript" src="lib/jsoneditor/lib/ace/ace.js"></script>
-      <script type="text/javascript" src="lib/jsoneditor/lib/ace/mode-json.js"></script>
-      <script type="text/javascript" src="lib/jsoneditor/lib/ace/theme-textmate.js"></script>
-      <script type="text/javascript" src="lib/jsoneditor/lib/ace/theme-jsoneditor.js"></script>
-
-      <!-- json lint -->
-      <script type="text/javascript" src="lib/jsoneditor/lib/jsonlint/jsonlint.js"></script>
-
       <style type="text/css">
           body {
-              background-color: lightyellow;
+              background-color: rgb(233, 255, 226);
           }
           #editor-col {
               width: 60%;
@@ -55,11 +46,11 @@
 
   </head>
 <body id="options-page">
-  <h1>Testofill options</h1>
+  <h1>Form Filler options</h1>
     <p>
         You may either define rules for filling in forms manually or copy them from form(s)
         on a webpage via
-        the Testofill context menu item "Save form(s)".
+        the Form Filler context menu item "Save form(s)".
     </p>
     <p></p>
     <p>
@@ -89,7 +80,7 @@
             <p>
                 The <code>forms</code> map maps URL of pages to an array of "rule sets".
                 The URL is actually a <a href="https://developer.mozilla.org/en/docs/Web/JavaScript/Guide/Regular_Expressions">
-                regular expression</a> and Testofill uses it to check whether the current URL contains is.
+                regular expression</a> and Form Filler uses it to check whether the current URL contains is.
             </p>
             <p>
                 So f.ex. <code>/myapp/a_page.html</code> will match <code>http://example.com/myapp/a_page.html</code>
@@ -135,10 +126,11 @@
                         <pre>
 ["$bool"]         // true or false
 ["+",             // f.ex. +4712345678
-    ["$pick", 46, 47],
+    ["$pickone", [46, 47]],
     ["$natural", {"min": 10000000,"max":99999999}]]
 ["$string",      // string of 1, 7, or 13 chars
-    {"length": [["$pick", 1, 7, 13]]}]</pre>
+    {"length": ["$pickone", [1, 7, 13]]}]
+["$cpf"] // a valid cpf number</pre>
                         (An array is concatenated to a string.)
                     </li>
             </ul>
@@ -151,8 +143,7 @@
     <p><em>Powered by <a href="http://chancejs.com/">Chance.js</a>,
             <a href="http://sizzlejs.com/">Sizzle</a>,
             <a href="http://underscorejs.org/">Underscore.js</a>,
-            and <a href="https://github.com/josdejong/jsoneditor/">JSON Editor<a/> with
-            <a href="http://ace.c9.io/">Ace editor</a> and <a href="https://github.com/zaach/jsonlint">JSON Lint</a>
+            and <a href="https://github.com/josdejong/jsoneditor/">JSON Editor<a/>
         </em>
         </p>
 

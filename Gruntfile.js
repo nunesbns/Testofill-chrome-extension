@@ -7,34 +7,18 @@ module.exports = function(grunt) {
       src: ['Gruntfile.js', 'src/content/*.js','src/extension/*.js'],
       options: {
         esversion: 6
-        //maxlen: 80,
-        //quotmark: 'single'
       }
-    },
-    simplemocha: {
-      options: {
-        globals: ['expect'],
-        timeout: 3000,
-        ignoreLeaks: false,
-        ui: 'bdd',
-        reporter: 'tap'
-      },
-      all: { src: ['test/*.js'] }
     },
     concat: {
        content: {
           src: ['lib/shared/*.js','lib/content/*.js','src/content/*.js'],
-          dest: 'src/extension/generated/testofill-content-packed.js'
+          dest: 'src/extension/generated/form-filler-content-packed.js'
        }
-//        ,extension: {
-//           src: ['lib/shared/*.js','lib/extension/**/*.js'],
-//           dest: 'src/extension/generated/extension-lib-packed.js'
-//        }
     },
     compress: {
       main: {
         options: {
-          archive: 'Testofill-dist.zip'
+          archive: 'form-filler-dist.zip'
         },
         expand: true,
         cwd: 'src/extension/',
@@ -43,7 +27,7 @@ module.exports = function(grunt) {
     },
     watch: {
       scripts: {
-        files: ['Gruntfile.js', 'src/**/*.js', '!src/extension/generated/**/*', 'test/**/*.js'],
+        files: ['Gruntfile.js', 'src/**/*.js', '!src/extension/generated/**/*'],
         tasks: ['development']
       }
     }
@@ -53,10 +37,9 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-compress');
-  grunt.loadNpmTasks('grunt-simple-mocha');
   grunt.loadNpmTasks('grunt-contrib-watch');
 
-  grunt.registerTask('development', ['jshint', 'simplemocha','concat']);
-  grunt.registerTask('default', ['jshint', 'simplemocha','concat','compress']);
+  grunt.registerTask('development', ['jshint','concat']);
+  grunt.registerTask('default', ['jshint','concat','compress']);
 
 };

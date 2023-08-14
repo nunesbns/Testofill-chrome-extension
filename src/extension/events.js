@@ -1,21 +1,21 @@
 /**
  * Handle browsing and extension events, invoke the content script
- * (testofill-run.js).
+ * (form-filler-run.js).
  */
 
 //---------------------------------------------------------------- reusable: ruleSets, content, storage
 /* Get the rules and try to apply them to this page, if matched */
 function findMatchingRules(currentUrl, ruleSetsCallback, callIfNone) {
-  chrome.storage.local.get('testofill.rules', function(items) {
+  chrome.storage.local.get('form-filler.rules', function (items) {
     if (typeof chrome.runtime.lastError !== "undefined") {
       console.log("ERROR Run.js: Rules loading failed", chrome.runtime.lastError);
       return;
     }
 
-    var rules = items['testofill.rules'];
+    var rules = items ? items['form-filler.rules'] : null;
     var matchFound = false;
 
-    if (typeof rules !== 'undefined' && typeof rules.forms !== 'undefined') {
+    if (rules && rules.forms) {
       for (var urlRE in rules.forms) {
         if (currentUrl.match(new RegExp(urlRE))) {
           matchFound = true;
@@ -31,34 +31,28 @@ function findMatchingRules(currentUrl, ruleSetsCallback, callIfNone) {
 }
 
 function sendMessageToContentScript(tab, messageId, payload, responseCallback) {
-  // Beware - there is an issue here:
-  // We re-insert the script every time, even if already inserted (could lead to duplicate listeners etc.)
-  // Could be fixed by sending msg first and only exec. script if it fails (b/c not inserted yet).
-  // Notice that when the plugin is updated, it also needs to re-insert the content script (communication will fail)
-  chrome.tabs.executeScript(tab.id, {file: "generated/testofill-content-packed.js"}, function() {
-    chrome.tabs.sendMessage(tab.id, {id: messageId, payload: payload}, responseCallback);
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["generated/form-filler-content-packed.js"]
+  }).then(() => {
+    chrome.tabs.sendMessage(tab.id, { id: messageId, payload: payload }, responseCallback);
+  }).catch(error => {
+    console.error("Failed to execute content script:", error);
   });
 }
 
-/**
- * @param rules {object} the full rules JSON object to save
- * @param rules {fn} function to all; params: error {optional} - error message upon failure
- */
-function saveRulesToStorage(rules, responseCallback) {
-    chrome.storage.local.set({'testofill.rules': rules}, function() {
-      if (typeof chrome.runtime.lastError === "undefined") {
-        responseCallback();
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "saveRulesToStorage") {
+    chrome.storage.local.set({ 'form-filler.rules': message.data }, function () {
+      if (chrome.runtime.lastError) {
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
       } else {
-        // F.ex. due to {message: "QUOTA_BYTES_PER_ITEM quota exceeded"} // 4kB
-        var error = chrome.runtime.lastError.message + " when trying to save " +
-             JSON.stringify(rules).length + 'testofill.rules'.length + " B";
-        console.log("FAILED to store rules due to %s; rules: ",
-                    error,
-                    rules);
-        responseCallback(error);
+        sendResponse({ success: true });
       }
     });
-}
+    return true;
+  }
+});
 //---------------------------------------------------------------- listeners
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ listeners:menu
@@ -73,16 +67,16 @@ function ctxMenuHandler(info, tab) {
 
 function ctxMenuFillFormHandler(tab) {
   // TODO use frame url if defined
-  findMatchingRules(tab.url, function(ruleSets){
+  findMatchingRules(tab.url, function (ruleSets) {
     if (ruleSets.length === 0) {
       // this handler currently not called if no rulesets
-      chrome.windows.create({ url: 'no-rulesets.html?url=' + encodeURI(tab.url), type: 'popup', width: 400, height: 250});
+      chrome.windows.create({ url: 'no-rulesets.html?url=' + encodeURI(tab.url), type: 'popup', width: 400, height: 250 });
     } else if (ruleSets.length == 1) {
       // Apply directly
       sendMessageToContentScript(tab, "fill_form", ruleSets[0]);
     } else {
       // Show popup // TODO does not work; also, open rather popup not full window
-      chrome.windows.create({ url: 'popup.html#' + tab.id, type: 'popup', width: 350, height: 200});
+      chrome.windows.create({ url: 'popup.html#' + tab.id, type: 'popup', width: 350, height: 200 });
     }
   }, true);
 }
@@ -96,16 +90,16 @@ function mergeIntoOptions(tab, forms) {
   if (!forms) return;
   const url = tab.url;
 
-  chrome.storage.local.get('testofill.rules', function(items) {
+  chrome.storage.local.get('form-filler.rules', function (items) {
     if (typeof chrome.runtime.lastError !== "undefined") {
       return; // TODO report error; how?
     }
 
-    var rules = items['testofill.rules'];
+    var rules = items['form-filler.rules'];
 
     // data sanitization
     if (typeof rules === "undefined") {
-      rules = {"forms": {}};
+      rules = { "forms": {} };
     } else if (typeof (rules.forms) === "undefined") {
       rules.forms = {};
     }
@@ -117,11 +111,11 @@ function mergeIntoOptions(tab, forms) {
     var existingUrlForms = rules.forms[url];
     rules.forms[url] = existingUrlForms.concat(forms);
 
-    saveRulesToStorage(rules, function(error) {
+    saveRulesToStorage(rules, function (error) {
       if (typeof error === 'undefined') {
-        sendMessageToContentScript(tab, 'extracted_forms_saved', {url: url, count: forms.length});
+        sendMessageToContentScript(tab, 'extracted_forms_saved', { url: url, count: forms.length });
       } else {
-        sendMessageToContentScript(tab, 'extracted_forms_save_failed', {url: url, count: forms.length, error: error});
+        sendMessageToContentScript(tab, 'extracted_forms_save_failed', { url: url, count: forms.length, error: error });
       }
     });
 
@@ -132,15 +126,13 @@ function mergeIntoOptions(tab, forms) {
 
 /* Set # ruleSets on icon when tab/url changes, set popup */
 function setBadgeAndIconAction(tabId, ruleSets) {
-  // When 1+ sets => show in the badge; tabId => shows only when this tab active
-  chrome.browserAction.setBadgeText({tabId: tabId, text: ruleSets.length.toString()});
-  chrome.browserAction.setBadgeBackgroundColor({tabId: tabId, color: '#04B4AE'});
+  chrome.action.setBadgeText({ tabId: tabId, text: ruleSets.length.toString() });
+  chrome.action.setBadgeBackgroundColor({ tabId: tabId, color: '#04B4AE' });
 
-  // If 2+ rule sets => set popup (replaces the default browserAction.onCliked action set below)
   if (ruleSets.length > 1) {
-    chrome.browserAction.setPopup({tabId: tabId, popup: 'popup.html'});
+    chrome.action.setPopup({ tabId: tabId, popup: 'popup.html' });
   } else {
-    chrome.browserAction.setPopup({tabId: tabId, popup: ''}); // remove the popup, if any (needed????)
+    chrome.action.setPopup({ tabId: tabId, popup: '' });
   }
 }
 
@@ -155,16 +147,16 @@ function triggerAutofillingIfEnabled(tab, ruleSets) {
  *
  * BEWARE: Seems not to be triggered for cached pages.
  */
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (changeInfo.status !== "complete") return;
 
   const url = tab.url;
   // Default badge/popup if no matching rulesets
-  chrome.browserAction.setBadgeText({tabId: tabId, text: 'N/A'});
-  chrome.browserAction.setBadgeBackgroundColor({tabId: tabId, color: '#808080'});
-  chrome.browserAction.setPopup({tabId: tabId, popup: 'no-rulesets.html?url=' + encodeURI(url)});
+  chrome.action.setBadgeText({ tabId: tabId, text: 'N/A' });
+  chrome.action.setBadgeBackgroundColor({ tabId: tabId, color: '#808080' });
+  chrome.action.setPopup({ tabId: tabId, popup: 'no-rulesets.html?url=' + encodeURI(url) });
 
-  findMatchingRules(url, function(ruleSets){
+  findMatchingRules(url, function (ruleSets) {
     setBadgeAndIconAction(tabId, ruleSets);
     triggerAutofillingIfEnabled(tab, ruleSets);
   });
@@ -175,8 +167,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 });
 
 /* Only triggered if there is 0-1 ruleSets (i.e. of there is no popup win). */
-chrome.browserAction.onClicked.addListener(function(tab){
-  findMatchingRules(tab.url, function(ruleSets){
+chrome.action.onClicked.addListener(function (tab) {
+  findMatchingRules(tab.url, function (ruleSets) {
     sendMessageToContentScript(tab, "fill_form", ruleSets[0]);
   });
 });
@@ -184,13 +176,17 @@ chrome.browserAction.onClicked.addListener(function(tab){
 chrome.contextMenus.onClicked.addListener(ctxMenuHandler);
 
 // Set up context menu tree at install time.
-chrome.runtime.onInstalled.addListener(function() {
- chrome.contextMenus.create({"title": "Testofill this!",
-                             "contexts":["page", "frame", "editable"],
-                             "id": "fill_form"});
- chrome.contextMenus.create({"title": "Save form(s)",
-                             "contexts":["page", "frame", "editable"],
-                             "id": "save_form"});
+chrome.runtime.onInstalled.addListener(function () {
+  chrome.contextMenus.create({
+    "title": "Form Filler this!",
+    "contexts": ["page", "frame", "editable"],
+    "id": "fill_form"
+  });
+  chrome.contextMenus.create({
+    "title": "Save form(s)",
+    "contexts": ["page", "frame", "editable"],
+    "id": "save_form"
+  });
 });
 
 /**
@@ -198,9 +194,9 @@ chrome.runtime.onInstalled.addListener(function() {
  * @param changes {map} key -> {oldValue> .., newValue: ..}
  * @param namespace {string} e.g. 'sync'
  */
-chrome.storage.onChanged.addListener(function(changes, namespace) {
+chrome.storage.onChanged.addListener(function (changes, namespace) {
   for (var key in changes) {
-    if (key !== 'testofill.rules') return;
+    if (key !== 'form-filler.rules') return;
 
     // TODO Notify Options page to reload? Update browser icon?
 

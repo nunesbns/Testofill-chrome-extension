@@ -1,7 +1,7 @@
 {
-  "name": "Testofill, Form Filler for Testers",
+  "name": "Form Filler for Testers",
   "version": "0.15.0",
-  "manifest_version": 2,
+  "manifest_version": 3,
   "author": "Bruno Nunes <https:/nunes.dev.br/>",
   "icons": {
     "16": "autofill_16x16.png"
@@ -10,31 +10,35 @@
   "permissions": [
     "activeTab",
     "storage",
-    "tabs",
-    "contextMenus",
+    "scripting",
+    "contextMenus"
+  ],
+  "host_permissions": [
     "http://*/*",
     "https://*/*"
   ],
-  "browser_action": {
-    "default_title": "Testofill",
+  "action": {
+    "default_title": "Form Filler",
     "default_icon": {
-      "19": "autofill_16x16.png"
-    }
-	},
+      "16": "autofill_16x16.png"
+    },
+    "default_popup": "popup.html"
+  },
   "content_scripts": [
     {
-      "matches" : [
+      "matches": [
         "http://*/*",
         "https://*/*"
       ],
-      "js": ["generated/testofill-content-packed.js"],
+      "js": [
+        "generated/form-filler-content-packed.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true
     }
   ],
   "options_page": "options.html",
   "background": {
-    "scripts": ["events.js"],
-    "persistent": false
+    "service_worker": "events.js"
   }
 }
